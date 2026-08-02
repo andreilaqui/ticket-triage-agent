@@ -1,0 +1,23 @@
+[
+  {
+    "id": "T-001",
+    "channel": "email",
+    "customer_name": "Priya Nair",
+    "message": "Hi, I want to book the Glacier Skywalk excursion for 4 people next Friday. How much will that cost total, and what time does it leave?",
+    "note_for_us": "Clean single-doc match. Pricing + schedule lookup. Should resolve confidently with a direct, correct answer."
+  },
+  {
+    "id": "T-002",
+    "channel": "live_chat",
+    "customer_name": "Dan Ferreira",
+    "message": "We had shuttle tickets booked for tomorrow's Lake Louise tour but I just heard there's a wildfire evacuation notice in the area. Will we get our money back if it's cancelled?",
+    "note_for_us": "Tests retrieval PRECISION, not just matching. The doc has two different refund rules - the standard tiered one and the weather/wildfire exception. A naive agent might grab the tiered rule (less than 24hrs = no refund) instead of the correct wildfire-hold clause (full refund/rebooking, no penalty). Good test of whether it actually reasons about which section applies."
+  },
+  {
+    "id": "T-003",
+    "channel": "website_form",
+    "customer_name": "Grace Kim",
+    "message": "Can you recommend a good restaurant near the Glacier View Hotel for our anniversary dinner? We're not sure if we should book a shuttle to get there or just walk.",
+    "note_for_us": "Deliberately mixed scope. The shuttle-logistics half is answerable from our KB (or close to it). The restaurant recommendation half is Visitor-Experience-Desk territory, which we intentionally left undocumented. Good test of whether the agent can partially resolve, decline the out-of-scope part cleanly, and NOT hallucinate a restaurant name."
+  }
+]
