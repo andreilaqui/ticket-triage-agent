@@ -4,7 +4,7 @@
 | Tier | Qualification | Key Perks |
 |---|---|---|
 | Silver | Default, all members | 1 point per $1 spent |
-| Gold | 5+ nights or $2,000 spent in 12 months | 1.5 points per $1, free cancellation on hotel bookings (see refund policy), late check-out priority |
+| Gold | 5+ nights or $2,000 spent in 12 months | 1.5 points per $1, free cancellation on hotel bookings, late check-out priority |
 | Platinum | 15+ nights or $6,000 spent in 12 months | 2 points per $1, all Gold perks, free room upgrade when available, dedicated support line |
 
 ## Earning Points
@@ -20,3 +20,7 @@ stay every 24 months.
 ## Enrollment
 Free to join at booking, online, or at check-in. Retroactive point
 credit for a stay is available if requested within 30 days of check-out.
+
+## See Also
+- `refund-cancellation-policy.md` - how the Gold/Platinum cancellation exception applies to hotel bookings
+- `vacation-rental-policies.md` - note that the Gold/Platinum exception does not apply to vacation rentals

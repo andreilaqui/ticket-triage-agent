@@ -14,11 +14,13 @@ workflows: classify → retrieve → resolve or escalate.
 ## Scope (MoSCoW)
 
 **Must have**
-- BM25 search over the knowledge base
-- Agentic tool-calling loop (search_kb → draft_reply / escalate)
-- Core knowledge base docs covering Northstar's main business lines
+- Knowledge base docs covering Northstar's main business lines
+- Agentic tool-calling loop (Claude reads the full KB as context, then
+  decides: `draft_reply` or `escalate`)
 - Sample ticket set covering happy-path, ambiguous, and out-of-scope cases
 - CLI runner showing it end-to-end
+- BM25 search module, built and tested — but not on the live agent path,
+  see "Retrieval architecture" below for why
 
 **Should have**
 - FastAPI wrapper exposing the same agent as `POST /tickets`, sharing one
@@ -26,13 +28,15 @@ workflows: classify → retrieve → resolve or escalate.
   shouldn't know or care how it was invoked)
 - A deliberate prompt-injection test ticket + documented handling
 - Escalation reasoning shown in output, not just a black-box flag
-- Basic test for the search module
+- Basic tests for search and for KB cross-reference integrity
+  (`check_references.py`)
 - This README, documenting decisions and trade-offs as they're made
 
 **Could have**
 - Admin interface so non-technical staff can maintain KB content directly
   (no engineer required to update a price or policy)
-- Embeddings/semantic search as an upgrade path over BM25
+- Re-enabling retrieval (BM25 or an embeddings upgrade) once the KB
+  outgrows full-context inclusion — see "Scalability path" below
 - Small web UI instead of CLI
 - Model tiering (Haiku for triage, Sonnet for complex replies)
 
@@ -51,19 +55,23 @@ _TODO_
 
 ## Design decisions
 
-**Search: BM25 (keyword), not embeddings.** Deterministic and debuggable —
-every retrieval result traces back to actual shared vocabulary between the
-ticket and a doc, no black-box similarity score. Known limitation: it only
-catches word overlap. A ticket saying "I want my money back" won't match
-`refund-cancellation-policy.md` unless it shares vocabulary with it. That's
-an accepted trade-off for a demo where the KB and tickets are both
-hand-written; embeddings are the documented upgrade path (see Could have).
+**Knowledge base delivery: full-context inclusion, not retrieval — at this
+scale.** The entire knowledge base measures 1,600 words / ~2,200 tokens
+across 8 docs (measured, not estimated). Small enough to include directly
+in every prompt, which eliminates the ranking problem entirely — there's
+no "wrong doc" to retrieve if Claude reads the complete text of all of
+them every time. Made cost-effective by Claude's prompt caching, designed
+for exactly this pattern: large, static, repeatedly-reused context. A full
+BM25 module (`search.py`) was built and tested first; see "Retrieval
+architecture" below for why it's not what powers the live agent, and
+"Scalability path" for when that would change.
 
-**Decision logic: agentic tool-calling loop, not single structured output.**
-Claude gets `search_kb`, `draft_reply`, and `escalate` as tools and decides
-the sequence itself, rather than one prompt returning a JSON verdict. This
-is the actual "agent" skill (judgment over a sequence of steps), not just
-classification with extra formatting.
+**Decision logic: agentic tool-calling loop, not single structured
+output.** Claude gets `draft_reply` and `escalate` as tools and decides
+which to call based on whether the full knowledge base — given directly
+in context — actually contains enough to answer confidently. This is the
+real "agent" skill (judgment over available information, including
+knowing when *not* to answer), not classification with extra formatting.
 
 **Knowledge base freshness: files are re-read on every search, not cached
 in memory.** At 8 small markdown files there's no performance cost to this,
@@ -79,36 +87,69 @@ reasonable enhancement to that interface later, but a human owning and
 approving what gets published is the assumed default, not a fully
 autonomous AI-maintained knowledge base.
 
-## Known limitations (found through testing, not assumed)
+## Retrieval architecture: built, tested, and deliberately not the live path
 
-**Cross-document retrieval precision is imperfect.** Testing found that
-cross-reference disclaimers written for human readers — e.g. the hotel
-refund doc's note "vacation rentals have a separate policy, see
-vacation-rental-policies.md" — leak the referenced doc's distinctive
-vocabulary ("vacation," "rental," "tours") into the source doc. Confirmed
-by word-frequency analysis, not just by eyeballing scores. Net effect: for
-some queries (e.g. one mentioning "wildfire" + "tour"), BM25 ranks the
-*wrong* doc first, because the hotel refund doc's own disclaimer happens
-to contain the word "tour."
+A full BM25 keyword-search module (`search.py`) was built first, against
+all 8 knowledge base docs. Testing surfaced two genuine precision bugs
+along the way — both confirmed through diagnostics, not assumed:
 
-**Deliberately not fixed yet, and here's the reasoning why:** search
-returns the top 3 candidates, not just the top 1, and the correct doc
-still appears in that shortlist in every case tested. The actual
-disambiguation is deferred to the agent, which reads full document
-content, not just a ranking score. Fixing search precision in isolation
-— before confirming whether it actually causes a wrong final answer —
-risks optimizing a layer that may not matter. Revisit if the *agent's
-final answers* turn out wrong, not just if a ranking score looks
-imperfect in isolation.
+1. **Cross-reference leakage.** Disclaimer notes written for human readers
+   (e.g. "vacation rentals have a separate policy, see X.md") leaked the
+   referenced doc's vocabulary into the source doc — BM25 can't tell
+   "mentions X to rule it out" from "mentions X because it's relevant."
+   Fixed by moving cross-references into a `## See Also` section, stripped
+   before indexing but still shown to the agent when it reads a doc.
+2. **Topical dilution.** Even after that fix, a narrowly-scoped doc (the
+   hotel refund policy — 100% about cancellation) structurally out-scores
+   a broader multi-topic doc (vacation rental policies, where cancellation
+   is one section among several) on cancellation-related queries. This is
+   a known limitation of whole-document BM25 generally, not a bug specific
+   to this implementation — chunking by section is the real fix, and was
+   evaluated and deliberately not built (see below).
 
-**Why this matters more, not less, in production:** this project's 8
-docs are unusually clean — written once, by one person (me), all at once.
-Real knowledge base content is maintained over time by multiple
-non-technical staff, none of whom have a reason to think about keyword
-overlap when writing a helpful cross-reference note — nor should they
-have to. That means this exact failure mode gets *more* likely over time
-in a real deployment, not less. It's a real argument for treating the
-agent's own reasoning as the primary safety net against imperfect
-retrieval, rather than depending on search to stay precise — since
-production content will always be messier than a demo corpus written in
-one sitting.
+Both are documented precisely: `check_references.py` validates `## See
+Also` links point to real files, and `tests/test_search.py` has
+regression tests against the exact queries that first exposed each bug.
+
+**Then the scale question got asked, and it changed the answer.** The
+entire knowledge base measures 1,600 words / ~2,200 tokens, total, across
+all 8 docs. Small enough to include directly in every prompt — which
+eliminates the ranking problem completely, since there's no "wrong doc"
+to retrieve if Claude reads the full, actual text of all of them every
+time. This is made cost-effective by Claude's prompt caching, which is
+designed for exactly this pattern: large, static, repeatedly-reused
+context checked on every incoming ticket.
+
+**So `search.py` stays in the repo, fully built and tested, but the live
+agent uses full-context inclusion instead.** This isn't abandoning
+precision — it's choosing the simpler, more accurate approach for the
+actual measured scale of the problem, after empirically finding exactly
+where the more complex approach's precision breaks down first.
+
+## Scalability path
+
+The right architecture depends on scale *and shape*, not just "the KB got
+bigger." Three distinct tiers:
+
+**Tier 1 — where this repo is now.** Single tenant (Northstar), ~2,200
+tokens total. Full-context inclusion + prompt caching. Retrieval has
+nothing meaningful to add at this size.
+
+**Tier 2 — Northstar grows organically.** More properties, more service
+lines, more edge-case policies, still one client. Once the KB crosses
+roughly 20-30K tokens, or document count grows into the dozens with real
+topical overlap (more docs competing for words like "cancellation" — the
+exact pattern found and fixed above), that's the signal to revisit
+retrieval. Not because the context window can't hold it, but because
+relevance ranking starts mattering again at that density. `search.py` is
+built, tested, and ready for this transition.
+
+**Tier 3 — acquisition by a much larger chain.** A different *shape* of
+problem, not a bigger version of Tier 2. Nobody wants every property's
+policies in every ticket's context regardless of window size — the real
+need is a **routing layer**: which brand, property, or region does this
+ticket even belong to? If tickets carry reliable metadata (property ID,
+brand tag), that's simple filtering, no ML required. Retrieval only
+re-enters the picture *within* the correctly-scoped subset, and only if
+that subset is itself large — a two-layer architecture (route, then
+retrieve), not a single bigger index.

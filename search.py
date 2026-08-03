@@ -43,6 +43,24 @@ def _tokenize(text: str) -> list[str]:
     return text.split()
 
 
+def _strip_see_also(text: str) -> str:
+    """Remove the '## See Also' section (and everything after it) before
+    a document is tokenized for indexing.
+
+    Cross-reference notes are written for human readers and for the agent
+    to use as a recovery hint if it lands on the wrong doc - but mentioning
+    another doc's topic, even just to rule it out, still reads as evidence
+    *for* a keyword match under BM25. Stripping this section before
+    indexing keeps each doc's vocabulary focused on what it's actually
+    about. The full document, See Also included, is still what gets
+    returned to the caller (see search_knowledge_base) - only the
+    index-time tokenization excludes it.
+    """
+    marker = "## See Also"
+    idx = text.find(marker)
+    return text if idx == -1 else text[:idx]
+
+
 def _load_documents() -> list[tuple[str, str]]:
     """Read every .md file in knowledge_base/ fresh off disk.
 
@@ -67,8 +85,8 @@ def search_knowledge_base(query: str, top_k: int = 3) -> list[SearchResult]:
         return []
 
     filenames = [name for name, _ in docs]
-    contents = [content for _, content in docs]
-    tokenized_corpus = [_tokenize(content) for content in contents]
+    contents = [content for _, content in docs]  # full text, returned as-is
+    tokenized_corpus = [_tokenize(_strip_see_also(content)) for content in contents]
 
     bm25 = BM25Okapi(tokenized_corpus)
     scores = bm25.get_scores(_tokenize(query))

@@ -17,8 +17,12 @@ desk on arrival day.
 ## Identification
 A government-issued photo ID and a credit card matching the reservation
 name are required at check-in. A $100 incidental hold is placed on the
-card and released within 3–5 business days of check-out.
+card and released within 3-5 business days of check-out.
 
 ## Minimum Age to Book
 Guests must be 21 or older to book and check in without an accompanying
 adult.
+
+## See Also
+- `booking-changes-hotels.md` - changing dates or room details on an existing reservation
+- `refund-cancellation-policy.md` - cancelling a reservation entirely

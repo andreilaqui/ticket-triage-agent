@@ -1,11 +1,11 @@
 """
-Basic tests for search.py.
+Tests for search.py.
 
-Honest caveat: with only one knowledge base doc drafted so far, these
-tests can prove the search *mechanics* work (indexing, scoring,
-filtering, ranking) but can't yet prove it correctly discriminates
-between multiple competing documents - that needs more KB docs in
-place first. Worth adding cross-document tests once the KB grows.
+Context: this module is built and tested but is not on the live agent's
+path (the agent uses full-context KB inclusion instead - see README's
+"Retrieval architecture" section for why). These tests exist because
+search.py is the component that gets activated if the knowledge base
+outgrows full-context inclusion later (see README's "Scalability path").
 """
 
 import sys
@@ -31,3 +31,32 @@ def test_scores_are_sorted_descending():
     results = search_knowledge_base("refund cancellation tour shuttle")
     scores = [r.score for r in results]
     assert scores == sorted(scores, reverse=True)
+
+
+def test_vacation_rental_doc_is_a_top_candidate_for_its_own_query():
+    """Known limitation (documented in README): the correct doc doesn't
+    always rank #1 for competing-policy queries, due to topical dilution
+    - a narrowly-scoped doc (hotel refund policy) out-scores a broader
+    multi-topic doc even when the broader doc is the right answer. It
+    does reliably make the top-3 shortlist, which is the honest claim
+    this test makes. Fixing top-1 precision would need chunking by
+    section - evaluated, deliberately not built, see README."""
+    results = search_knowledge_base("can I cancel my Northstar Vacation Homes booking")
+    filenames = [r.filename for r in results]
+    assert "vacation-rental-policies.md" in filenames
+
+
+def test_tours_doc_is_a_top_candidate_for_its_own_query():
+    """Same known limitation as above, different query - see README's
+    'Retrieval architecture' section for the full diagnosis."""
+    results = search_knowledge_base("wildfire evacuation cancel tour refund")
+    filenames = [r.filename for r in results]
+    assert "tours-shuttles-booking.md" in filenames
+
+
+def test_full_content_still_includes_see_also_section():
+    """The See Also section should be stripped for indexing/scoring only -
+    the agent still needs to see it when it actually reads the doc."""
+    results = search_knowledge_base("hotel change fee")
+    match = next(r for r in results if r.filename == "booking-changes-hotels.md")
+    assert "## See Also" in match.content
