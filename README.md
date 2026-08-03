@@ -74,4 +74,41 @@ real scale, but is free correctness here.
 **KB maintenance: markdown files edited directly, for this demo only.** In
 a real deployment, non-technical client staff would need to update prices
 and policies without touching git or markdown syntax — that's the CMS/admin
-interface noted under Could have.
+interface noted under Could have. AI assistance for drafting content is a
+reasonable enhancement to that interface later, but a human owning and
+approving what gets published is the assumed default, not a fully
+autonomous AI-maintained knowledge base.
+
+## Known limitations (found through testing, not assumed)
+
+**Cross-document retrieval precision is imperfect.** Testing found that
+cross-reference disclaimers written for human readers — e.g. the hotel
+refund doc's note "vacation rentals have a separate policy, see
+vacation-rental-policies.md" — leak the referenced doc's distinctive
+vocabulary ("vacation," "rental," "tours") into the source doc. Confirmed
+by word-frequency analysis, not just by eyeballing scores. Net effect: for
+some queries (e.g. one mentioning "wildfire" + "tour"), BM25 ranks the
+*wrong* doc first, because the hotel refund doc's own disclaimer happens
+to contain the word "tour."
+
+**Deliberately not fixed yet, and here's the reasoning why:** search
+returns the top 3 candidates, not just the top 1, and the correct doc
+still appears in that shortlist in every case tested. The actual
+disambiguation is deferred to the agent, which reads full document
+content, not just a ranking score. Fixing search precision in isolation
+— before confirming whether it actually causes a wrong final answer —
+risks optimizing a layer that may not matter. Revisit if the *agent's
+final answers* turn out wrong, not just if a ranking score looks
+imperfect in isolation.
+
+**Why this matters more, not less, in production:** this project's 8
+docs are unusually clean — written once, by one person (me), all at once.
+Real knowledge base content is maintained over time by multiple
+non-technical staff, none of whom have a reason to think about keyword
+overlap when writing a helpful cross-reference note — nor should they
+have to. That means this exact failure mode gets *more* likely over time
+in a real deployment, not less. It's a real argument for treating the
+agent's own reasoning as the primary safety net against imperfect
+retrieval, rather than depending on search to stay precise — since
+production content will always be messier than a demo corpus written in
+one sitting.
