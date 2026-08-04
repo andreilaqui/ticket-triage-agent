@@ -76,7 +76,7 @@ share one core without duplicating agent logic (see Design decisions).
 ## Setup
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt -r requirements-dev.txt
 cp .env.example .env        # then add your real ANTHROPIC_API_KEY to .env
 python -m pytest tests/     # runs without needing an API key at all
 python check_references.py  # validates KB cross-links
@@ -84,6 +84,9 @@ python check_references.py  # validates KB cross-links
 # try the agent for real (needs a real API key in .env):
 python agent.py "Hi, I want to book the Glacier Skywalk excursion for 4 people next Friday. How much will that cost?"
 ```
+
+On Windows cmd, the only line that differs is `copy .env.example .env`
+instead of `cp` - everything else is identical.
 
 ## Design decisions
 
