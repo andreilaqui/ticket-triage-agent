@@ -48,10 +48,42 @@ workflows: classify → retrieve → resolve or escalate.
 - Multi-tenant/auth system
 
 ## Architecture
-_TODO: fill in once the agent loop is built._
+
+```
+ticket text
+    |
+    v
+agent.py: triage_ticket()
+    - builds a system prompt = instructions + the ENTIRE knowledge base
+      (all 8 docs, ~2,200 tokens - see "Retrieval architecture" below)
+    - sends ticket + system prompt to Claude (Haiku 4.5) with two tools
+    - forces a tool call (tool_choice: "any") - Claude must decide
+    |
+    +-- draft_reply(reply, category, cited_docs)  -> TriageResult(resolved)
+    |
+    +-- escalate(reason, category)                -> TriageResult(escalated)
+```
+
+`search.py` and `check_references.py` exist alongside this but are not
+called by `triage_ticket()` - they're the scale-ready retrieval layer,
+documented in "Retrieval architecture" and "Scalability path" below.
+
+`triage_ticket(ticket_text: str) -> TriageResult` is a single pure
+function with no knowledge of ticket metadata (id, channel, etc.) or of
+how it was invoked - that's what lets the planned CLI and FastAPI wrapper
+share one core without duplicating agent logic (see Design decisions).
 
 ## Setup
-_TODO_
+
+```bash
+pip install -r requirements.txt
+cp .env.example .env        # then add your real ANTHROPIC_API_KEY to .env
+python -m pytest tests/     # runs without needing an API key at all
+python check_references.py  # validates KB cross-links
+
+# try the agent for real (needs a real API key in .env):
+python agent.py "Hi, I want to book the Glacier Skywalk excursion for 4 people next Friday. How much will that cost?"
+```
 
 ## Design decisions
 
