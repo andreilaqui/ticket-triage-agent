@@ -83,6 +83,9 @@ python check_references.py  # validates KB cross-links
 
 # try the agent for real (needs a real API key in .env):
 python agent.py "Hi, I want to book the Glacier Skywalk excursion for 4 people next Friday. How much will that cost?"
+
+# or run the whole sample ticket set at once:
+python main.py
 ```
 
 On Windows cmd, the only line that differs is `copy .env.example .env`
