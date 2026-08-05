@@ -23,13 +23,13 @@ workflows: classify → retrieve → resolve or escalate.
   see "Retrieval architecture" below for why
 
 **Should have**
-- FastAPI wrapper exposing the same agent as `POST /tickets`, sharing one
-  core function with the CLI (separation of concerns — the agent logic
-  shouldn't know or care how it was invoked)
+- ✅ FastAPI wrapper (`api.py`) exposing the same agent as `POST /tickets`,
+  sharing one core function with the CLI (separation of concerns — the
+  agent logic shouldn't know or care how it was invoked)
 - ✅ Deliberate prompt-injection test tickets (T-004, T-005) + dedicated
   guardrail tests (`tests/test_guardrails.py`)
-- Escalation reasoning shown in output, not just a black-box flag
-- Basic tests for search and for KB cross-reference integrity
+- ✅ Escalation reasoning shown in output, not just a black-box flag
+- ✅ Basic tests for search and for KB cross-reference integrity
   (`check_references.py`)
 - This README, documenting decisions and trade-offs as they're made
 
@@ -63,6 +63,11 @@ agent.py: triage_ticket()
     +-- draft_reply(reply, category, cited_docs)  -> TriageResult(resolved)
     |
     +-- escalate(reason, category)                -> TriageResult(escalated)
+
+Two entry points call this same function - neither duplicates its logic:
+
+    main.py  -- CLI, loops over data/sample_tickets.json, prints results
+    api.py   -- FastAPI, POST /tickets, same function, HTTP in/out
 ```
 
 `search.py` and `check_references.py` exist alongside this but are not
@@ -71,8 +76,8 @@ documented in "Retrieval architecture" and "Scalability path" below.
 
 `triage_ticket(ticket_text: str) -> TriageResult` is a single pure
 function with no knowledge of ticket metadata (id, channel, etc.) or of
-how it was invoked - that's what lets the planned CLI and FastAPI wrapper
-share one core without duplicating agent logic (see Design decisions).
+how it was invoked - that's what lets the CLI and API share one core
+without duplicating agent logic (see Design decisions).
 
 ## Setup
 
@@ -91,6 +96,12 @@ python agent.py "Hi, I want to book the Glacier Skywalk excursion for 4 people n
 
 # or run the whole sample ticket set at once:
 python main.py
+
+# or run it as an HTTP API instead:
+uvicorn api:app --reload
+# then, from another terminal:
+curl -X POST http://127.0.0.1:8000/tickets -H "Content-Type: application/json" -d "{\"message\": \"How much is the Glacier Skywalk tour for 2 people?\"}"
+# interactive docs at http://127.0.0.1:8000/docs
 ```
 
 On Windows cmd, the only line that differs is `copy .env.example .env`
