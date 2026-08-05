@@ -26,7 +26,8 @@ workflows: classify → retrieve → resolve or escalate.
 - FastAPI wrapper exposing the same agent as `POST /tickets`, sharing one
   core function with the CLI (separation of concerns — the agent logic
   shouldn't know or care how it was invoked)
-- A deliberate prompt-injection test ticket + documented handling
+- ✅ Deliberate prompt-injection test tickets (T-004, T-005) + dedicated
+  guardrail tests (`tests/test_guardrails.py`)
 - Escalation reasoning shown in output, not just a black-box flag
 - Basic tests for search and for KB cross-reference integrity
   (`check_references.py`)
@@ -80,6 +81,10 @@ pip install -r requirements.txt -r requirements-dev.txt
 cp .env.example .env        # then add your real ANTHROPIC_API_KEY to .env
 python -m pytest tests/     # runs without needing an API key at all
 python check_references.py  # validates KB cross-links
+
+# guardrail tests (prompt injection) need a real key and cost a tiny
+# real amount - not part of the free suite above, run explicitly:
+python -m pytest tests/test_guardrails.py -v
 
 # try the agent for real (needs a real API key in .env):
 python agent.py "Hi, I want to book the Glacier Skywalk excursion for 4 people next Friday. How much will that cost?"
