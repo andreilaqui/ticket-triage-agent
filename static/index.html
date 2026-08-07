@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northstar Rockies — Guest Support</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stone: #EDE8DD;
+    --surface: #FAF8F3;
+    --spruce: #1C2B26;
+    --spruce-mid: #3C544C;
+    --sage: #8B9B8E;
+    --glacier: #6FA8B0;
+    --glacier-bg: #E4EEEE;
+    --amber: #C9862F;
+    --amber-bg: #F5E9D6;
+    --danger-text: #7A3B2E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--stone);
+    color: var(--spruce);
+    font-family: 'Work Sans', sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 48px 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Faint topographic contour lines - literal mountain terrain, restrained */
+  .contours {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    opacity: 0.35;
+    pointer-events: none;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 560px;
+  }
+
+  header {
+    margin-bottom: 28px;
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--spruce-mid);
+    margin: 0 0 6px 0;
+  }
+
+  h1 {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: 42px;
+    line-height: 0.95;
+    letter-spacing: 0.01em;
+    margin: 0 0 8px 0;
+    color: var(--spruce);
+  }
+
+  .sub {
+    font-size: 16px;
+    color: var(--spruce-mid);
+    margin: 0;
+    max-width: 46ch;
+  }
+
+  .divider {
+    height: 1px;
+    background: repeating-linear-gradient(90deg, var(--sage) 0, var(--sage) 6px, transparent 6px, transparent 12px);
+    margin: 24px 0;
+    opacity: 0.6;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid rgba(28, 43, 38, 0.12);
+    border-radius: 4px;
+    padding: 24px;
+  }
+
+  label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--spruce-mid);
+    margin-bottom: 8px;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 120px;
+    resize: vertical;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--spruce);
+    background: #fff;
+    border: 1px solid rgba(28, 43, 38, 0.25);
+    border-radius: 3px;
+    padding: 12px 14px;
+  }
+
+  textarea::placeholder {
+    color: var(--sage);
+  }
+
+  textarea:focus-visible,
+  button:focus-visible {
+    outline: 2px solid var(--glacier);
+    outline-offset: 2px;
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+  }
+
+  button {
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--surface);
+    background: var(--spruce);
+    border: none;
+    border-radius: 3px;
+    padding: 12px 22px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  button:hover:not(:disabled) {
+    background: var(--spruce-mid);
+  }
+
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .result {
+    margin-top: 20px;
+    display: none;
+  }
+
+  .result.visible {
+    display: block;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border-radius: 3px;
+    margin-bottom: 12px;
+  }
+
+  .badge.answered {
+    background: var(--glacier-bg);
+    color: #2C5B60;
+  }
+
+  .badge.team {
+    background: var(--amber-bg);
+    color: #8A5A1E;
+  }
+
+  .badge.error {
+    background: #F3E0DB;
+    color: var(--danger-text);
+  }
+
+  .result-text {
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--spruce);
+    white-space: pre-wrap;
+  }
+
+  .loading-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--spruce-mid);
+    letter-spacing: 0.04em;
+  }
+
+  footer {
+    margin-top: 28px;
+    font-size: 12px;
+    color: var(--sage);
+    text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    button { transition: none; }
+  }
+
+  @media (max-width: 480px) {
+    h1 { font-size: 34px; }
+    .card { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="contours" viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <g fill="none" stroke="#3C544C" stroke-width="1.2">
+    <path d="M -50 180 Q 150 120, 350 200 T 850 160" />
+    <path d="M -50 260 Q 180 210, 380 270 T 850 240" />
+    <path d="M -50 340 Q 200 300, 400 350 T 850 320" />
+    <path d="M -50 980 Q 160 1040, 360 970 T 850 1010" />
+    <path d="M -50 1060 Q 190 1120, 390 1050 T 850 1090" />
+  </g>
+</svg>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Northstar Rockies Hospitality Group</p>
+    <h1>Guest Support</h1>
+    <p class="sub">Ask about a booking, a policy, or anything else — we'll answer right away, or get a person on it.</p>
+  </header>
+
+  <div class="divider"></div>
+
+  <div class="card">
+    <form id="ticket-form">
+      <label for="message">Your message</label>
+      <textarea id="message" name="message" placeholder="e.g. How much is the Glacier Skywalk tour for two people?" required></textarea>
+      <div class="actions">
+        <button type="submit" id="submit-btn">Send message</button>
+      </div>
+    </form>
+
+    <div class="result" id="result">
+      <span class="badge" id="badge"></span>
+      <p class="result-text" id="result-text"></p>
+    </div>
+  </div>
+
+  <footer>Northstar Rockies Hospitality Group is a fictional company — this is a portfolio demo.</footer>
+</div>
+
+<script>
+  const form = document.getElementById('ticket-form');
+  const messageInput = document.getElementById('message');
+  const submitBtn = document.getElementById('submit-btn');
+  const resultBox = document.getElementById('result');
+  const badge = document.getElementById('badge');
+  const resultText = document.getElementById('result-text');
+
+  function showResult(badgeClass, badgeLabel, text) {
+    badge.className = 'badge ' + badgeClass;
+    badge.textContent = badgeLabel;
+    resultText.textContent = text;
+    resultBox.classList.add('visible');
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const message = messageInput.value.trim();
+    if (!message) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+    resultBox.classList.remove('visible');
+
+    try {
+      const response = await fetch('/tickets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+
+      if (!response.ok) {
+        throw new Error('request failed');
+      }
+
+      const data = await response.json();
+
+      if (data.action === 'resolved') {
+        showResult('answered', 'Answered', data.reply);
+      } else {
+        showResult(
+          'team',
+          'With our team',
+          "Thanks for reaching out — this needs a closer look from our team, and someone will follow up with you shortly."
+        );
+      }
+    } catch (err) {
+      showResult(
+        'error',
+        'Something went wrong',
+        "We couldn't send that just now. Please try again in a moment."
+      );
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Send message';
+    }
+  });
+</script>
+
+</body>
+</html>

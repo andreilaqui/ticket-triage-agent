@@ -22,6 +22,7 @@ http://127.0.0.1:8000/docs once the server is running.
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from agent import triage_ticket
@@ -75,3 +76,8 @@ def create_ticket_triage(request: TicketRequest) -> TicketResponse:
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
+
+
+# Mounted last, deliberately - so the explicit routes above are matched
+# first, and this only catches whatever's left (the guest UI at "/").
+app.mount("/", StaticFiles(directory="static", html=True), name="static")

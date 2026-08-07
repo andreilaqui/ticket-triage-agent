@@ -34,11 +34,23 @@ workflows: classify → retrieve → resolve or escalate.
 - This README, documenting decisions and trade-offs as they're made
 
 **Could have**
-- Admin interface so non-technical staff can maintain KB content directly
-  (no engineer required to update a price or policy)
+- ✅ Guest ticket web UI (`static/index.html`) — single page, anonymous,
+  served directly by `api.py`. Deliberately does not show the guest raw
+  `escalation_reason` or `cited_docs` (those are written for internal
+  reviewers) — shows either the actual answer or a warm "a person will
+  follow up" message instead.
+- Admin/CMS interface for non-technical KB editing — scoped, then
+  deliberately deferred to its own future effort once actually needed.
+  Reasoning: it's coupled to two other unsolved problems, not separable
+  from them — persistence (Render's free tier has an ephemeral
+  filesystem; file edits vanish on every redeploy/restart) and auth
+  (even "simple" HTTP Basic auth is still a real decision once real
+  state is involved). Building CMS UI now, ahead of solving either,
+  would produce something that looks done but silently loses data.
+  Revisit persistence + auth + CMS together as one bundle, not as three
+  separate half-finished features.
 - Re-enabling retrieval (BM25 or an embeddings upgrade) once the KB
   outgrows full-context inclusion — see "Scalability path" below
-- Small web UI instead of CLI
 - Model tiering (Haiku for triage, Sonnet for complex replies)
 
 **Won't have**
@@ -99,10 +111,29 @@ python main.py
 
 # or run it as an HTTP API instead:
 uvicorn api:app --reload
-# then, from another terminal:
-curl -X POST http://127.0.0.1:8000/tickets -H "Content-Type: application/json" -d "{\"message\": \"How much is the Glacier Skywalk tour for 2 people?\"}"
-# interactive docs at http://127.0.0.1:8000/docs
+# then open http://127.0.0.1:8000 in a browser for the guest ticket UI,
+# or http://127.0.0.1:8000/docs for the interactive API docs
 ```
+
+## Deploying (Render)
+
+The API and guest UI are one service (the UI is served as static files
+by `api.py` itself — see Architecture), so this is a single deploy:
+
+1. Push this repo to GitHub (already done for this project).
+2. On [render.com](https://render.com): New → Web Service → connect the
+   GitHub repo.
+3. Build command: `pip install -r requirements.txt`
+4. Start command: `uvicorn api:app --host 0.0.0.0 --port $PORT`
+5. Add an environment variable: `ANTHROPIC_API_KEY` = your real key
+   (Render's dashboard, not committed to the repo — same reason `.env`
+   is gitignored locally).
+6. Deploy. First request after any period of inactivity will be slow
+   (free tier spin-down) - that's expected, not a bug.
+
+Note: this deploys the guest UI only. The knowledge base files are part
+of the repo, not user-editable at runtime - see "Could have" above for
+why a live-editable CMS is deliberately not part of this deploy.
 
 On Windows cmd, the only line that differs is `copy .env.example .env`
 instead of `cp` - everything else is identical.

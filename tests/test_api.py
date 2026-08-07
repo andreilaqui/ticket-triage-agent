@@ -68,3 +68,10 @@ def test_escalated_ticket_maps_to_correct_response_shape(monkeypatch):
     assert body["action"] == "escalated"
     assert body["escalation_reason"] == "a test reason"
     assert body["reply"] is None
+
+
+def test_guest_ui_served_at_root():
+    client = TestClient(api.app)
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Northstar Rockies" in response.text
