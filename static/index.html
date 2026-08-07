@@ -96,6 +96,51 @@
     padding: 24px;
   }
 
+  .chips-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--spruce-mid);
+    margin: 0 0 10px 0;
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .chip {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--spruce-mid);
+    background: transparent;
+    border: 1px solid rgba(28, 43, 38, 0.3);
+    border-radius: 20px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease;
+  }
+
+  .chip:hover {
+    border-color: var(--spruce);
+    color: var(--spruce);
+    background: transparent;
+  }
+
+  .chip.edge {
+    border-style: dashed;
+    color: var(--sage);
+  }
+
+  .chip.edge:hover {
+    border-color: var(--amber);
+    color: #8A5A1E;
+  }
+
   label {
     display: block;
     font-family: 'IBM Plex Mono', monospace;
@@ -202,6 +247,18 @@
     white-space: pre-wrap;
   }
 
+  .result-note {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--spruce-mid);
+    margin-top: 10px;
+    display: none;
+  }
+
+  .result-note.visible {
+    display: block;
+  }
+
   .loading-text {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 13px;
@@ -248,6 +305,14 @@
   <div class="divider"></div>
 
   <div class="card">
+    <p class="chips-label">Not sure what to ask? Try one:</p>
+    <div class="chips">
+      <button type="button" class="chip" data-fill="How much is the Glacier Skywalk Excursion for 2 people, and when does it leave?">A tour question</button>
+      <button type="button" class="chip" data-fill="Can I bring my dog to Glacier View Hotel?">A pet policy question</button>
+      <button type="button" class="chip" data-fill="How do I earn Northstar Rewards points, and what do they get me?">A rewards question</button>
+      <button type="button" class="chip edge" data-fill="Can you recommend a good restaurant near Glacier View Hotel for our anniversary?">Something we don't cover</button>
+    </div>
+
     <form id="ticket-form">
       <label for="message">Your message</label>
       <textarea id="message" name="message" placeholder="e.g. How much is the Glacier Skywalk tour for two people?" required></textarea>
@@ -259,6 +324,7 @@
     <div class="result" id="result">
       <span class="badge" id="badge"></span>
       <p class="result-text" id="result-text"></p>
+      <p class="result-note" id="result-note"></p>
     </div>
   </div>
 
@@ -272,11 +338,25 @@
   const resultBox = document.getElementById('result');
   const badge = document.getElementById('badge');
   const resultText = document.getElementById('result-text');
+  const resultNote = document.getElementById('result-note');
 
-  function showResult(badgeClass, badgeLabel, text) {
+  document.querySelectorAll('.chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      messageInput.value = chip.dataset.fill;
+      messageInput.focus();
+    });
+  });
+
+  function showResult(badgeClass, badgeLabel, text, note) {
     badge.className = 'badge ' + badgeClass;
     badge.textContent = badgeLabel;
     resultText.textContent = text;
+    if (note) {
+      resultNote.textContent = note;
+      resultNote.classList.add('visible');
+    } else {
+      resultNote.classList.remove('visible');
+    }
     resultBox.classList.add('visible');
   }
 
@@ -308,7 +388,8 @@
         showResult(
           'team',
           'With our team',
-          "Thanks for reaching out — this needs a closer look from our team, and someone will follow up with you shortly."
+          "Thanks for reaching out — this needs a closer look from our team, and someone will follow up with you shortly.",
+          "That usually means one of two things: we need a bit more detail, or it's something outside what we handle here directly. Either way, a person picks it up from here — not a sign anything's broken."
         );
       }
     } catch (err) {
