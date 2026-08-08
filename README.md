@@ -1,4 +1,4 @@
-🔗 **[Live demo](https://ticket-triage-agent-aky4.onrender.com/)**
+🔗 **[Live demo](https://ticket-triage-agent-aky4.onrender.com/)** (free hosting — first load may take ~10-20 seconds to wake up)
 
 # Ticket Triage & Knowledge Assistant
 
