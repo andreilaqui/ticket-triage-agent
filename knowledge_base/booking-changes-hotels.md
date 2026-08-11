@@ -18,7 +18,7 @@ the front desk.
 | Timing before check-in | Fee |
 |---|---|
 | 72+ hours | No fee |
-| 24-72 hours | $25 change fee |
+| 24-72 hours | $15 change fee |
 | Less than 24 hours | $50 change fee, subject to availability |
 
 Northstar Rewards Gold and Platinum members are exempt from all change
