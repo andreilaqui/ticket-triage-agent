@@ -11,10 +11,21 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import pytest
 from fastapi.testclient import TestClient
 
 import api
 from agent import TriageResult
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    # Runs before every test in this file, not just the rate-limit one -
+    # otherwise an earlier test's /tickets calls could leave the shared
+    # limiter partway "used up," causing a later, unrelated test to fail
+    # with a confusing 429 instead of the 200 it actually expects.
+    api.limiter.reset()
+    yield
 
 
 def test_health_check():
@@ -75,3 +86,20 @@ def test_guest_ui_served_at_root():
     response = client.get("/")
     assert response.status_code == 200
     assert "Northstar Rockies" in response.text
+
+
+def test_tickets_endpoint_rate_limits_after_threshold(monkeypatch):
+    """10/minute is the configured limit (see api.py)."""
+    fake_result = TriageResult(
+        action="resolved", category="test", reply="ok", cited_docs=[]
+    )
+    monkeypatch.setattr(api, "triage_ticket", lambda text: fake_result)
+
+    client = TestClient(api.app)
+    statuses = [
+        client.post("/tickets", json={"message": "test"}).status_code
+        for _ in range(15)
+    ]
+
+    assert statuses.count(200) <= 10
+    assert 429 in statuses

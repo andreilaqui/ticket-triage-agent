@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Northstar Rockies — Content Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --stone: #EDE8DD;
+    --surface: #FAF8F3;
+    --spruce: #1C2B26;
+    --spruce-mid: #3C544C;
+    --sage: #8B9B8E;
+    --glacier: #6FA8B0;
+    --glacier-bg: #E4EEEE;
+    --amber: #C9862F;
+    --amber-bg: #F5E9D6;
+    --danger-bg: #F3E0DB;
+    --danger-text: #7A3B2E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--stone);
+    color: var(--spruce);
+    font-family: 'Work Sans', sans-serif;
+    padding: 40px 20px;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--spruce-mid);
+    margin: 0 0 6px 0;
+  }
+
+  h1 {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: 36px;
+    margin: 0 0 6px 0;
+  }
+
+  .session-note {
+    font-size: 13px;
+    color: var(--spruce-mid);
+    margin: 0 0 20px 0;
+  }
+
+  .caveat {
+    background: var(--amber-bg);
+    color: #8A5A1E;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px 14px;
+    border-radius: 3px;
+    margin-bottom: 24px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid rgba(28, 43, 38, 0.12);
+    border-radius: 4px;
+    padding: 22px;
+  }
+
+  .doc-list { display: flex; flex-direction: column; gap: 6px; }
+
+  .doc-item {
+    text-align: left;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 15px;
+    color: var(--spruce);
+    background: transparent;
+    border: 1px solid rgba(28, 43, 38, 0.15);
+    border-radius: 3px;
+    padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  .doc-item:hover { border-color: var(--spruce); background: var(--glacier-bg); }
+
+  .editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+
+  .editor-filename {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    color: var(--spruce);
+  }
+
+  .back-link {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13px;
+    color: var(--spruce-mid);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 340px;
+    resize: vertical;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--spruce);
+    background: #fff;
+    border: 1px solid rgba(28, 43, 38, 0.25);
+    border-radius: 3px;
+    padding: 12px 14px;
+  }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  button.primary {
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--surface);
+    background: var(--spruce);
+    border: none;
+    border-radius: 3px;
+    padding: 10px 20px;
+    cursor: pointer;
+  }
+
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    margin-top: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    border-radius: 3px;
+    display: none;
+  }
+
+  .status.visible { display: block; }
+  .status.ok { background: var(--glacier-bg); color: #2C5B60; }
+  .status.error { background: var(--danger-bg); color: var(--danger-text); }
+
+  .hidden { display: none; }
+
+  footer {
+    margin-top: 20px;
+    font-size: 12px;
+    color: var(--sage);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <p class="eyebrow">Northstar Rockies — Content Management</p>
+  <h1>Knowledge Base</h1>
+  <p class="session-note">Signed in via browser login. There's no server-side "log out" with this auth method — close the browser tab/window to end the session.</p>
+
+  <div class="caveat">
+    Changes are committed directly to GitHub. Render redeploys automatically on every commit, so a save here takes roughly 1–2 minutes to actually appear on the live guest site — not instant.
+  </div>
+
+  <div class="card">
+    <div id="list-view">
+      <div class="doc-list" id="doc-list"></div>
+    </div>
+
+    <div id="editor-view" class="hidden">
+      <div class="editor-header">
+        <span class="editor-filename" id="editor-filename"></span>
+        <button class="back-link" id="back-btn">← back to list</button>
+      </div>
+      <textarea id="editor-textarea"></textarea>
+      <div class="actions">
+        <button class="primary" id="save-btn">Save to GitHub</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <footer>Northstar Rockies Hospitality Group is a fictional company — this is a portfolio demo.</footer>
+</div>
+
+<script>
+  const listView = document.getElementById('list-view');
+  const editorView = document.getElementById('editor-view');
+  const docListEl = document.getElementById('doc-list');
+  const editorFilename = document.getElementById('editor-filename');
+  const editorTextarea = document.getElementById('editor-textarea');
+  const saveBtn = document.getElementById('save-btn');
+  const backBtn = document.getElementById('back-btn');
+  const statusEl = document.getElementById('status');
+
+  let currentFilename = null;
+  let currentSha = null;
+
+  function showStatus(kind, text) {
+    statusEl.className = 'status visible ' + kind;
+    statusEl.textContent = text;
+  }
+
+  function clearStatus() {
+    statusEl.className = 'status';
+    statusEl.textContent = '';
+  }
+
+  async function loadDocList() {
+    const response = await fetch('/cms/docs');
+    const data = await response.json();
+    docListEl.innerHTML = '';
+    data.filenames.forEach((filename) => {
+      const btn = document.createElement('button');
+      btn.className = 'doc-item';
+      btn.textContent = filename;
+      btn.addEventListener('click', () => openDoc(filename));
+      docListEl.appendChild(btn);
+    });
+  }
+
+  async function openDoc(filename) {
+    const response = await fetch('/cms/docs/' + encodeURIComponent(filename));
+    if (!response.ok) {
+      showStatus('error', 'Could not load that document.');
+      return;
+    }
+    const data = await response.json();
+    currentFilename = data.filename;
+    currentSha = data.sha;
+    editorFilename.textContent = data.filename;
+    editorTextarea.value = data.content;
+    clearStatus();
+    listView.classList.add('hidden');
+    editorView.classList.remove('hidden');
+  }
+
+  backBtn.addEventListener('click', () => {
+    editorView.classList.add('hidden');
+    listView.classList.remove('hidden');
+    clearStatus();
+  });
+
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    clearStatus();
+
+    try {
+      const response = await fetch('/cms/docs/' + encodeURIComponent(currentFilename), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editorTextarea.value, sha: currentSha }),
+      });
+
+      if (response.status === 409) {
+        showStatus('error', "This doc was changed by someone else since you loaded it. Click back and reopen it to get the latest version before retrying.");
+      } else if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        showStatus('error', err.detail || 'Save failed.');
+      } else {
+        showStatus('ok', 'Saved — committed to GitHub. Allow 1–2 minutes for it to appear on the live site.');
+      }
+    } catch (e) {
+      showStatus('error', "Couldn't reach the server. Try again.");
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save to GitHub';
+    }
+  });
+
+  loadDocList();
+</script>
+
+</body>
+</html>

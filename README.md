@@ -39,16 +39,13 @@ workflows: classify → retrieve → resolve or escalate.
   `escalation_reason` or `cited_docs` (those are written for internal
   reviewers) — shows either the actual answer or a warm "a person will
   follow up" message instead.
-- Admin/CMS interface for non-technical KB editing — scoped, then
-  deliberately deferred to its own future effort once actually needed.
-  Reasoning: it's coupled to two other unsolved problems, not separable
-  from them — persistence (Render's free tier has an ephemeral
-  filesystem; file edits vanish on every redeploy/restart) and auth
-  (even "simple" HTTP Basic auth is still a real decision once real
-  state is involved). Building CMS UI now, ahead of solving either,
-  would produce something that looks done but silently loses data.
-  Revisit persistence + auth + CMS together as one bundle, not as three
-  separate half-finished features.
+- ✅ Admin/CMS interface (`auth.py`, `github_kb.py`, `admin/cms.html`) —
+  view and edit existing KB docs, committed straight to GitHub, gated
+  behind HTTP Basic auth. Built in three tested stages after being
+  deliberately deferred once (auth → persistence → UI) — see "CMS /
+  knowledge base management" below for the full build, including the
+  security reasoning and the honest limitations (no add/delete docs,
+  no real logout, ~1-2 min publish delay).
 - Re-enabling retrieval (BM25 or an embeddings upgrade) once the KB
   outgrows full-context inclusion — see "Scalability path" below
 - Model tiering (Haiku for triage, Sonnet for complex replies)
@@ -115,6 +112,74 @@ uvicorn api:app --reload
 # or http://127.0.0.1:8000/docs for the interactive API docs
 ```
 
+## CMS / knowledge base management (in progress)
+
+Deferred earlier once, now being built deliberately, in three tested
+stages rather than all at once: auth first, then persistence (via
+committing straight to GitHub, since Render's free tier is ephemeral),
+then the actual CMS page.
+
+**Stage 1 — auth (done).** `auth.py`: a single shared username/password,
+read from `CMS_USERNAME`/`CMS_PASSWORD` env vars, checked with
+`secrets.compare_digest` rather than `==` (prevents a timing attack -
+see the module docstring for why that distinction is real, not
+theoretical caution). `GET /cms` is a real FastAPI route, not a static
+file — gating it there (not just the API calls under it) is what makes
+the browser's native login prompt appear on first page load. Test it
+locally:
+```bash
+# add CMS_USERNAME and CMS_PASSWORD to your .env first
+uvicorn api:app --reload
+# then visit http://127.0.0.1:8000/cms - browser should prompt for login
+```
+
+**Stage 2 — persistence (done).** `github_kb.py`: reads and writes KB
+docs via GitHub's Contents API instead of local disk, which is the
+actual fix for Render's ephemeral filesystem. Two things worth knowing:
+
+- **The filename whitelist is the security boundary, not just a
+  feature limit.** `list_valid_doc_filenames()` only allows filenames
+  that already exist in `knowledge_base/` locally — this is what rules
+  out path traversal (`../../etc/passwd`-style attacks), by
+  construction, not by trying to sanitize a filename after the fact.
+  This falls directly out of the earlier "edit-only, no add" scope
+  decision — the security boundary and the feature boundary are the
+  same line here, not two separate things.
+- **No custom locking was built for concurrent edits — GitHub's own
+  `sha` mechanism handles it for free.** Every update must include the
+  doc's current `sha` (from a prior read); GitHub rejects the write
+  (409) if someone else changed it first. `update_doc_content` catches
+  that specific case and raises a clear "someone else already changed
+  this, reload and try again" error instead of a generic failure.
+
+Test it locally (no server needed - this exercises the real GitHub API
+directly):
+```bash
+python -c "from github_kb import get_doc_content; d = get_doc_content('pet-policy.md'); print(d.sha); print(d.content[:100])"
+```
+
+**Stage 3 — CMS page (done).** `admin/cms.html`, served only through the
+`GET /cms` route (never through the public `static/` mount — deliberately
+kept in a separate directory so it's unreachable any other way). Simple
+list → click → edit → save flow against `github_kb.py`. Two things worth
+noting:
+
+- **No custom "log out."** HTTP Basic has no real session to end
+  server-side — the page says so plainly rather than faking a button
+  that wouldn't actually do anything. Closing the browser is the only
+  real way to end the session.
+- **The "1–2 minute delay" caveat is shown directly in the UI**, not
+  just in this README — someone using the CMS live shouldn't have to
+  read documentation to understand why their edit isn't visible on the
+  guest site instantly.
+
+Test it locally end to end:
+```bash
+uvicorn api:app --reload
+# visit http://127.0.0.1:8000/cms, log in, click a doc, edit, save -
+# then check the repo on GitHub for a new real commit
+```
+
 ## Deploying (Render)
 
 The API and guest UI are one service (the UI is served as static files
@@ -124,7 +189,9 @@ by `api.py` itself — see Architecture), so this is a single deploy:
 2. On [render.com](https://render.com): New → Web Service → connect the
    GitHub repo.
 3. Build command: `pip install -r requirements.txt`
-4. Start command: `uvicorn api:app --host 0.0.0.0 --port $PORT`
+4. Start command: `uvicorn api:app --host 0.0.0.0 --port $PORT --proxy-headers`
+   (the `--proxy-headers` flag matters, not just style — see "Rate
+   limiting" below for why)
 5. Add an environment variable: `ANTHROPIC_API_KEY` = your real key
    (Render's dashboard, not committed to the repo — same reason `.env`
    is gitignored locally).
@@ -134,6 +201,40 @@ by `api.py` itself — see Architecture), so this is a single deploy:
 Note: this deploys the guest UI only. The knowledge base files are part
 of the repo, not user-editable at runtime - see "Could have" above for
 why a live-editable CMS is deliberately not part of this deploy.
+
+## Rate limiting
+
+`POST /tickets` is limited to 10 requests/minute per client (only this
+endpoint - it's the one with real per-call cost; `/health` and the
+auth-gated `/cms` routes aren't limited).
+
+**A real correctness bug got caught before this shipped, worth recording
+precisely.** `slowapi`'s default IP-detection (`get_remote_address`) has
+a documented bug — it checks for a header key that doesn't actually
+match how proxies send it, so it silently never finds it and falls back
+to `request.client.host`. Behind *any* reverse proxy (which Render is),
+that fallback returns the **proxy's** IP, not the visitor's — meaning
+every visitor would get bucketed under the same shared limit. Worst
+case: one person's traffic exhausts the limit, and it silently breaks
+the guest UI for every other visitor at once. That's a worse failure
+mode than having no rate limiter at all.
+
+**The actual fix lives at the server layer, not in application code:**
+uvicorn's own `--proxy-headers` flag correctly populates
+`request.client.host` with the real client IP before our code ever sees
+the request. Our own key function (`get_client_ip` in `api.py`) just
+reads that directly — no header-parsing of our own to get wrong. This
+is *why* the Render start command above includes that flag; it's load
+-bearing, not decorative.
+
+**Honest limitation, stated rather than hidden:** this doesn't defend
+against a client that spoofs its own IP-related headers directly — a
+real hardened setup would also restrict which upstream hosts are
+trusted to set forwarding headers at all. Not built here, since the
+[Anthropic Console spend limit](https://platform.claude.com) already
+set on this project is the actual backstop against runaway cost — the
+rate limiter is a second, complementary layer against everyday
+nuisance traffic, not the sole defense.
 
 On Windows cmd, the only line that differs is `copy .env.example .env`
 instead of `cp` - everything else is identical.
