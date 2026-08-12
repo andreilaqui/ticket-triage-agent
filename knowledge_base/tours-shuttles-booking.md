@@ -9,7 +9,7 @@ properties.
 | Tour / Shuttle | Price | Schedule |
 |---|---|---|
 | Banff Gondola Shuttle | $45/person round trip | Hourly, 8am-4pm, departs Northstar Lodge Canmore |
-| Lake Louise Day Tour | $120/person (canoe rental add-on: $35) | Departs 7:30am, returns ~6pm |
+| Lake Louise Day Tour | $120/person (canoe rental add-on: $35/canoe, seats up to 2) | Departs 7:30am, returns ~6pm |
 | Glacier Skywalk Excursion | $95/person | Half-day, Wed/Fri/Sun only, departs 8:30am, returns ~1:00pm |
 | Columbia Icefield Adventure | $160/person, includes lunch | Full day, departs 7:00am, returns ~7:00pm |
 | Airport Shuttle (YYC to Canmore/Banff) | $65 one-way / $110 round trip | Pre-booked, 24hr notice required |
