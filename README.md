@@ -1,17 +1,33 @@
-🔗 **[Live demo](https://ticket-triage-agent-aky4.onrender.com/)** (free hosting — first load may take ~10-20 seconds to wake up)
-
 # Ticket Triage & Knowledge Assistant
 
-An agentic support-ticket triage system built with the Claude API. Given an
-incoming support ticket, the agent searches a knowledge base, decides whether
-it can confidently resolve the issue, and either drafts a cited reply or
-escalates with a clear reason.
+🔗 **[Live demo](https://ticket-triage-agent-aky4.onrender.com/)** (free hosting — first load may take ~10-20 seconds to wake up)
+
+![Demo](docs/demo.gif)
+
+An AI agent that triages hospitality support tickets: reads a full knowledge
+base, decides whether it can confidently answer or needs a human, and either
+drafts a cited reply or escalates with a specific reason. Built end-to-end
+with the Claude API and deployed live, not just running locally.
+
+**What this demonstrates:**
+- Agentic tool-calling with Claude — the agent decides *whether* to answer
+  or escalate, not just what to say
+- Prompt injection resistance, verified with live automated tests against
+  real attack patterns, not just asserted in a comment
+- A real architectural pivot (retrieval → full-context) backed by measured
+  data, with the reasoning documented, not hidden
+- A GitHub-API-backed CMS solving a real hosting constraint (ephemeral
+  filesystem on free tier) without needing a database
+- A genuine correctness bug — a rate limiter that would've silently
+  counted every visitor as one shared client behind a proxy — caught and
+  fixed before it shipped, documented with the reasoning below
 
 Built as a portfolio project modeled on real tourism/hospitality-ops support
 workflows: classify → retrieve → resolve or escalate.
 
 ## Status
-🚧 Work in progress — architecture and build log below.
+✅ Live and deployed — see the demo link above. Architecture and full
+build log, including real bugs found and fixed along the way, below.
 
 ## Scope (MoSCoW)
 
